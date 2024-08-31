@@ -30,12 +30,15 @@ class CryptoTopology {
   }
 
   /**
-   * This is the first version of the topology that is build at the beginning of Chapter 3. If you
+   * This is the first version of the topology that is build at the beginning of
+   * Chapter 3. If you
    * want to run this, change the following line in App.java:
    *
-   * <p>Original: Topology topology = CryptoTopology.build();
+   * <p>
+   * Original: Topology topology = CryptoTopology.build();
    *
-   * <p>Change to: Topology topology = CryptoTopology.buildV1();
+   * <p>
+   * Change to: Topology topology = CryptoTopology.buildV1();
    */
   public static Topology buildV1() {
     StreamsBuilder builder = new StreamsBuilder();
@@ -57,16 +60,14 @@ class CryptoTopology {
     // start streaming tweets using our custom value serdes. Note: regarding
     // the key serdes (Serdes.ByteArray()), if could also use Serdes.Void()
     // if we always expect our keys to be null
-    KStream<byte[], Tweet> stream =
-        builder.stream("tweets", Consumed.with(Serdes.ByteArray(), new TweetSerdes()));
+    KStream<byte[], Tweet> stream = builder.stream("tweets", Consumed.with(Serdes.ByteArray(), new TweetSerdes()));
     stream.print(Printed.<byte[], Tweet>toSysOut().withLabel("tweets-stream"));
 
     // filter out retweets
-    KStream<byte[], Tweet> filtered =
-        stream.filterNot(
-            (key, tweet) -> {
-              return tweet.isRetweet();
-            });
+    KStream<byte[], Tweet> filtered = stream.filterNot(
+        (key, tweet) -> {
+          return tweet.isRetweet();
+        });
 
     // match all tweets that specify English as the source language
     Predicate<byte[], Tweet> englishTweets = (key, tweet) -> tweet.getLang().equals("en");
@@ -86,11 +87,10 @@ class CryptoTopology {
     nonEnglishStream.print(Printed.<byte[], Tweet>toSysOut().withLabel("tweets-non-english"));
 
     // for non-English tweets, translate the tweet text first.
-    KStream<byte[], Tweet> translatedStream =
-        nonEnglishStream.mapValues(
-            (tweet) -> {
-              return languageClient.translate(tweet, "en");
-            });
+    KStream<byte[], Tweet> translatedStream = nonEnglishStream.mapValues(
+        (tweet) -> {
+          return languageClient.translate(tweet, "en");
+        });
 
     // merge the two streams
     KStream<byte[], Tweet> merged = englishStream.merge(translatedStream);
@@ -98,18 +98,17 @@ class CryptoTopology {
     // enrich with sentiment and salience scores
     // note: the EntitySentiment class is auto-generated from the schema
     // definition in src/main/avro/entity_sentiment.avsc
-    KStream<byte[], EntitySentiment> enriched =
-        merged.flatMapValues(
-            (tweet) -> {
-              // perform entity-level sentiment analysis
-              List<EntitySentiment> results = languageClient.getEntitySentiment(tweet);
+    KStream<byte[], EntitySentiment> enriched = merged.flatMapValues(
+        (tweet) -> {
+          // perform entity-level sentiment analysis
+          List<EntitySentiment> results = languageClient.getEntitySentiment(tweet);
 
-              // remove all entity results that don't match a currency
-              results.removeIf(
-                  entitySentiment -> !currencies.contains(entitySentiment.getEntity()));
+          // remove all entity results that don't match a currency
+          results.removeIf(
+              entitySentiment -> !currencies.contains(entitySentiment.getEntity()));
 
-              return results;
-            });
+          return results;
+        });
 
     // write to the output topic. note: the following code shows how to use
     // both a registry-aware Avro Serde and a registryless Avro Serde
@@ -118,7 +117,7 @@ class CryptoTopology {
           "crypto-sentiment",
           // registry-aware Avro Serde
           Produced.with(
-              Serdes.ByteArray(), AvroSerdes.EntitySentiment("http://localhost:8081", false)));
+              Serdes.ByteArray(), AvroSerdes.EntitySentiment("http://schema-registry:8081", false)));
     } else {
       enriched.to(
           "crypto-sentiment",
