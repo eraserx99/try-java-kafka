@@ -1,5 +1,6 @@
 package com.magicalpipelines;
 
+import com.google.common.base.Function;
 import com.magicalpipelines.language.DummyClient;
 import com.magicalpipelines.language.GcpClient;
 import com.magicalpipelines.language.LanguageClient;
@@ -9,9 +10,13 @@ import com.magicalpipelines.serialization.avro.AvroSerdes;
 import com.magicalpipelines.serialization.json.TweetSerdes;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.kstream.Branched;
+import org.apache.kafka.streams.kstream.BranchedKStream;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Predicate;
@@ -71,26 +76,27 @@ class CryptoTopology {
 
     // match all tweets that specify English as the source language
     Predicate<byte[], Tweet> englishTweets = (key, tweet) -> tweet.getLang().equals("en");
-
     // match all other tweets
     Predicate<byte[], Tweet> nonEnglishTweets = (key, tweet) -> !tweet.getLang().equals("en");
 
-    // branch based on tweet language
-    KStream<byte[], Tweet>[] branches = filtered.branch(englishTweets, nonEnglishTweets);
-
-    // English tweets
-    KStream<byte[], Tweet> englishStream = branches[0];
-    englishStream.print(Printed.<byte[], Tweet>toSysOut().withLabel("tweets-english"));
-
-    // non-English tweets
-    KStream<byte[], Tweet> nonEnglishStream = branches[1];
-    nonEnglishStream.print(Printed.<byte[], Tweet>toSysOut().withLabel("tweets-non-english"));
-
-    // for non-English tweets, translate the tweet text first.
-    KStream<byte[], Tweet> translatedStream = nonEnglishStream.mapValues(
+    Function<KStream<byte[], Tweet>, KStream<byte[], Tweet>> translate = input -> input.mapValues(
         (tweet) -> {
           return languageClient.translate(tweet, "en");
         });
+
+    Branched<byte[], Tweet> englishBranched = Branched.as("english");
+    // for non-English tweets, they will be branched and translated
+    Branched<byte[], Tweet> translatedBranched = Branched.withFunction(translate, "translated");
+    Map<String, KStream<byte[], Tweet>> branches = filtered.split().branch(englishTweets, englishBranched)
+        .branch(nonEnglishTweets, translatedBranched).noDefaultBranch();
+
+    // English tweets
+    KStream<byte[], Tweet> englishStream = branches.get("english");
+    englishStream.print(Printed.<byte[], Tweet>toSysOut().withLabel("tweets-english"));
+
+    // non-English tweets
+    KStream<byte[], Tweet> translatedStream = branches.get("translated");
+    translatedStream.print(Printed.<byte[], Tweet>toSysOut().withLabel("tweets-translated"));
 
     // merge the two streams
     KStream<byte[], Tweet> merged = englishStream.merge(translatedStream);
