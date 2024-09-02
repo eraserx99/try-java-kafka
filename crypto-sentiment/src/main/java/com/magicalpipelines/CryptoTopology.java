@@ -19,6 +19,7 @@ import org.apache.kafka.streams.kstream.Branched;
 import org.apache.kafka.streams.kstream.BranchedKStream;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Predicate;
 import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.Produced;
@@ -87,15 +88,15 @@ class CryptoTopology {
     Branched<byte[], Tweet> englishBranched = Branched.as("english");
     // for non-English tweets, they will be branched and translated
     Branched<byte[], Tweet> translatedBranched = Branched.withFunction(translate, "translated");
-    Map<String, KStream<byte[], Tweet>> branches = filtered.split().branch(englishTweets, englishBranched)
+    Map<String, KStream<byte[], Tweet>> branches = filtered.split(Named.as("split-")).branch(englishTweets, englishBranched)
         .branch(nonEnglishTweets, translatedBranched).noDefaultBranch();
 
     // English tweets
-    KStream<byte[], Tweet> englishStream = branches.get("english");
+    KStream<byte[], Tweet> englishStream = branches.get("split-english");
     englishStream.print(Printed.<byte[], Tweet>toSysOut().withLabel("tweets-english"));
 
     // non-English tweets
-    KStream<byte[], Tweet> translatedStream = branches.get("translated");
+    KStream<byte[], Tweet> translatedStream = branches.get("split-translated");
     translatedStream.print(Printed.<byte[], Tweet>toSysOut().withLabel("tweets-translated"));
 
     // merge the two streams
