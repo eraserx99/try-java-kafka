@@ -1,34 +1,31 @@
-# create the tweets topic
+# create the game events topic
 kafka-topics \
   --bootstrap-server broker:29092 \
-  --topic tweets \
+  --topic score-events \
   --replication-factor 1 \
   --partitions 4 \
   --create
 
-# create the crypto-sentiment topic
+# create the players topic
 kafka-topics \
   --bootstrap-server broker:29092 \
-  --topic crypto-sentiment \
+  --topic players \
   --replication-factor 1 \
   --partitions 4 \
   --create
 
-kafka-console-producer \
+# create the products topic
+kafka-topics \
   --bootstrap-server broker:29092 \
-  --topic tweets < test.json
+  --topic products \
+  --replication-factor 1 \
+  --partitions 4 \
+  --create
 
-kafka-console-consumer \
+# create the high-scores topic
+kafka-topics \
   --bootstrap-server broker:29092 \
-  --topic tweets \
-  --from-beginning
-
-kafka-console-consumer \
-  --bootstrap-server broker:29092 \
-  --topic crypto-sentiment \
-  --from-beginning
-
-kafka-avro-console-consumer \
-  --bootstrap-server broker:29092 \
-  --topic crypto-sentiment \
-  --from-beginning
+  --topic high-scores \
+  --replication-factor 1 \
+  --partitions 4 \
+  --create
