@@ -52,7 +52,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 task runFirst(type: JavaExec) {
-  main = application.mainClass
+  main = 'com.magicalpipelines.App' 
   classpath = sourceSets.main.runtimeClasspath 
   systemProperties = [
     'host': 'localhost',
@@ -62,7 +62,7 @@ task runFirst(type: JavaExec) {
 }
 
 task runSecond(type: JavaExec) {
-  main = application.mainClass
+  main = 'com.magicalpipelines.App'
   classpath = sourceSets.main.runtimeClasspath 
   systemProperties = [
     'host': 'localhost',
