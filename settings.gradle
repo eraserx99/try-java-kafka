@@ -18,6 +18,9 @@ plugins {
 }
 
 rootProject.name = 'try-java-kafka'
+/*
 include('app')
 include('crypto-sentiment')
 include('video-game-leaderboard')
+*/
+include("patient-monitoring")
