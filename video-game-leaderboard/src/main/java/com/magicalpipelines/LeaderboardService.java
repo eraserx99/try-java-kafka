@@ -14,11 +14,11 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StoreQueryParameters;
+import org.apache.kafka.streams.StreamsMetadata;
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
-import org.apache.kafka.streams.state.StreamsMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +99,9 @@ class LeaderboardService {
   void getCount(Context ctx) {
     long count = getStore().approximateNumEntries();
 
-    for (StreamsMetadata metadata : streams.allMetadataForStore("leader-boards")) {
+    // for (StreamsMetadata metadata : streams.allMetadataForStore("leader-boards"))
+    // {
+    for (StreamsMetadata metadata : streams.streamsMetadataForStore("leader-boards")) {
       if (!hostInfo.equals(metadata.hostInfo())) {
         continue;
       }
@@ -139,8 +141,7 @@ class LeaderboardService {
     String productId = ctx.pathParam("key");
 
     // find out which host has the key
-    KeyQueryMetadata metadata =
-        streams.queryMetadataForKey("leader-boards", productId, Serdes.String().serializer());
+    KeyQueryMetadata metadata = streams.queryMetadataForKey("leader-boards", productId, Serdes.String().serializer());
 
     // the local instance has this key
     if (hostInfo.equals(metadata.activeHost())) {
@@ -161,11 +162,10 @@ class LeaderboardService {
     // a remote instance has the key
     String remoteHost = metadata.activeHost().host();
     int remotePort = metadata.activeHost().port();
-    String url =
-        String.format(
-            "http://%s:%d/leaderboard/%s",
-            // params
-            remoteHost, remotePort, productId);
+    String url = String.format(
+        "http://%s:%d/leaderboard/%s",
+        // params
+        remoteHost, remotePort, productId);
 
     // issue the request
     OkHttpClient client = new OkHttpClient();
